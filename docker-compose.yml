@@ -1,0 +1,51 @@
+x-app: &app
+  build:
+    context: .
+    dockerfile: docker/Dockerfile
+  image: baseapp-php
+  volumes:
+    - .:/var/www/html
+  depends_on:
+    mysql:
+      condition: service_healthy
+
+services:
+  app:
+    <<: *app
+    container_name: baseapp-app
+    ports:
+      - "${APP_PORT:-8090}:80"
+
+  queue:
+    <<: *app
+    container_name: baseapp-queue
+    command: php artisan queue:work --tries=3 --sleep=3
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    container_name: baseapp-mailpit
+    ports:
+      - "${FORWARD_MAILPIT_PORT:-1025}:1025"
+      - "${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025"
+
+  mysql:
+    image: mysql:8.4
+    container_name: baseapp-mysql
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-laravel}
+      MYSQL_USER: ${DB_USERNAME:-laravel}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+    ports:
+      - "${FORWARD_DB_PORT:-3307}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  mysql-data:
