@@ -8,13 +8,16 @@ Laravel 13 + Filament 5 admin base app ("Base Admin"). It runs in Docker: PHP 8.
 
 ```bash
 docker compose up -d --build
-docker exec baseapp-app php artisan test                       # full suite (SQLite in-memory, see phpunit.xml)
-docker exec baseapp-app php artisan test --filter=ProfileTest  # one class; or --filter=test_method_name
-docker exec baseapp-app vendor/bin/pint --dirty                # format changed files
-docker exec baseapp-app php artisan migrate --seed             # seeders are idempotent (updateOrCreate/firstOrCreate)
-docker exec baseapp-app php artisan optimize:clear             # stale bootstrap/cache (e.g. /login 404s) – has happened
-docker restart baseapp-queue                                   # after code changes, so the worker reloads
+docker compose exec app php artisan test                       # full suite (SQLite in-memory, see phpunit.xml)
+docker compose exec app php artisan test --filter=ProfileTest  # one class; or --filter=test_method_name
+docker compose exec app vendor/bin/pint --dirty                # format changed files
+docker compose exec app php artisan migrate --seed             # seeders are idempotent (updateOrCreate/firstOrCreate)
+docker compose exec app php artisan optimize:clear             # stale bootstrap/cache (e.g. /login 404s) – has happened
+docker compose restart queue                                   # after code changes, so the worker reloads
+bin/new-project <slug> [port]                                  # turn a template copy into a new app (.env names/ports)
 ```
+
+This repo is a **template** for new apps. Container/image names are `${APP_SLUG}-app|queue|mysql|mailpit` (default `baseapp`), and host ports come from `.env`. Use `docker compose …` rather than hard-coded container names. Don't add a top-level `name:` to `docker-compose.yml`: the project name (and so the MySQL volume) comes from the directory, and changing it would start an empty database.
 
 - App: http://localhost:8090/
 - Mailpit inbox: http://localhost:8025
@@ -24,11 +27,16 @@ docker restart baseapp-queue                                   # after code chan
 
 **Panel at root.** `AdminPanelProvider` uses `->path('')`, so `/` is the dashboard and guests are redirected to `/login`. `routes/web.php` only holds `/locale/{locale}`; never add a `/` route there.
 
-**Layering rule (the user requires this for all admin code):**
-- Filament resources, pages and actions are thin bridges.
-- Validation rules live in `app/Http/Requests/**` as `static rulesFor(?Model $record)`. Livewire has no FormRequest, so form fields pull them with `->rules(fn (?Model $record) => XRequest::rulesFor($record)['field'])`.
-- Logic lives in `app/Services/*`, called from actions via `->using(...)`. Services signal domain errors with `ValidationException`; the resource turns them into a danger notification.
-- Create and edit happen in **modals**: resources are generated with `--simple` and use a single `Manage*` page, never separate create/edit pages.
+**Layering (full rules: `.claude/rules/filament.md`, enforced by `tests/Feature/ArchitectureTest.php`):**
+- Filament is UI only.
+  - Per panel: `app/Filament/Admin/{Resources,Pages,Widgets}`.
+  - Reusable pieces: `app/Filament/Shared/{Forms,Actions,Concerns}`.
+  - Resources are wiring only: `Schemas/XForm::configure()` and `Tables/XsTable::configure()` per resource.
+- Validation lives in `app/Http/Requests/**` as `static rulesFor(?Model $record)`. Fields pull their rules per field, because Livewire has no FormRequest.
+- Only `app/Services/*` write data.
+  - Actions, page hooks and editable columns call services (`->using()`, `->updateStateUsing()`, `ServiceDeleteAction`).
+  - Services signal domain errors with a translated `ValidationException`.
+- Create and edit happen in **modals**: `make:filament-resource X --simple --not-embedded` gives one `Manage*` page.
 
 **Permissions.**
 - Each user belongs to exactly one role (`users.role_id`).
@@ -43,20 +51,13 @@ docker restart baseapp-queue                                   # after code chan
 - `is_active=false` only hides the sidebar item; it is **not** access control.
 - Menu rows are seeded per module by `MenuSeeder` and cannot be created or deleted in the UI.
 
-**Adding a module:**
-1. Add a `Module` case.
-2. Add `modules.*` and field strings to both language files.
-3. Add a policy.
-4. Run `make:filament-resource X --simple`, then add the `HasManagedNavigation` trait and `$module`.
-5. Add a Request class and a Service.
-6. Add the icon to `MenuSeeder` and run it.
-7. The role checkbox grid picks the module up automatically.
+**Adding a module:** use the `/filament-module` skill (`.claude/skills/filament-module/SKILL.md`). It covers the Module case, translations, Request, Service, Policy, split resource, `MenuSeeder` icon and tests. The Users module is the reference implementation.
 
 **Auth.**
-- Login: `App\Filament\Pages\Auth\Login` overrides `authenticate()` and calls `AuthService::attempt()`, which handles rate limiting (5 attempts per email+IP), the role check and session regeneration. Service errors are re-keyed to `data.email`.
+- Login: `App\Filament\Admin\Pages\Auth\Login` overrides `authenticate()` and calls `AuthService::attempt()`, which handles rate limiting (5 attempts per email+IP), the role check and session regeneration. Service errors are re-keyed to `data.email`.
 - Password reset uses Filament's built-in flow.
 - Profile: the avatar menu links to `/profile`. `Pages\Auth\EditProfile` sends the email-change verification via Filament (`->emailChangeVerification()`; the new email is applied only after its link is clicked) and saves name and password via `ProfileService`.
-- All auth emails are queued, so they need `baseapp-queue` running.
+- All auth emails are queued, so they need the `queue` service running.
 
 **i18n.**
 - Indonesian (`id`) is the default and English (`en`) the fallback. `SetLocale` middleware (web group + panel) applies `session('locale')`, set by `LocaleController` → `LocaleService`.
@@ -70,7 +71,7 @@ docker restart baseapp-queue                                   # after code chan
 **Design.**
 - Follows the antislop direction: Zinc gray plus a single Teal primary accent, the system font via `LocalFontProvider` (no web fonts), and flat surfaces.
 - Dashboard widgets (`app/Filament/Widgets`) show real data only and are gated by `canView()` per permission.
-- App Tailwind classes are **not** in Filament's compiled CSS. Use Filament components or inline styles in custom HTML; for example, the icon options in `MenuResource::iconOptions()` use inline styles.
+- App Tailwind classes are **not** in Filament's compiled CSS. Use Filament components or inline styles in custom HTML; for example, `Shared/Forms/HeroiconSelect` uses inline styles.
 
 ## Testing notes
 

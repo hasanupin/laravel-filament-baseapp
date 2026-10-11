@@ -1,8 +1,9 @@
+# Names and host ports come from .env (APP_SLUG, APP_PORT, FORWARD_*), so several copies of this base can run side by side.
 x-app: &app
   build:
     context: .
     dockerfile: docker/Dockerfile
-  image: baseapp-php
+  image: ${APP_SLUG:-baseapp}-php
   volumes:
     - .:/var/www/html
   depends_on:
@@ -12,26 +13,26 @@ x-app: &app
 services:
   app:
     <<: *app
-    container_name: baseapp-app
+    container_name: ${APP_SLUG:-baseapp}-app
     ports:
       - "${APP_PORT:-8090}:80"
 
   queue:
     <<: *app
-    container_name: baseapp-queue
+    container_name: ${APP_SLUG:-baseapp}-queue
     command: php artisan queue:work --tries=3 --sleep=3
     restart: unless-stopped
 
   mailpit:
     image: axllent/mailpit:v1.27
-    container_name: baseapp-mailpit
+    container_name: ${APP_SLUG:-baseapp}-mailpit
     ports:
       - "${FORWARD_MAILPIT_PORT:-1025}:1025"
       - "${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025"
 
   mysql:
     image: mysql:8.4
-    container_name: baseapp-mysql
+    container_name: ${APP_SLUG:-baseapp}-mysql
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-laravel}
       MYSQL_USER: ${DB_USERNAME:-laravel}

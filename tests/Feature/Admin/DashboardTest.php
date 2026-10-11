@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Admin;
 
-use App\Filament\Widgets\LatestUsers;
-use App\Filament\Widgets\StatsOverview;
+use App\Filament\Admin\Widgets\LatestUsers;
+use App\Filament\Admin\Widgets\StatsOverview;
 use App\Models\Role;
 use App\Models\User;
 use Filament\Widgets\AccountWidget;

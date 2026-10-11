@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Filament\Pages\Auth\EditProfile;
+use App\Filament\Admin\Pages\Auth\EditProfile;
 use App\Models\Role;
 use App\Models\User;
 use Filament\Auth\Notifications\NoticeOfEmailChangeRequest;

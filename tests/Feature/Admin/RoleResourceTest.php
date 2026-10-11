@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
-use App\Filament\Resources\Roles\Pages\ManageRoles;
+use App\Filament\Admin\Resources\Roles\Pages\ManageRoles;
 use App\Models\Role;
 use App\Models\User;
 use Filament\Actions\CreateAction;

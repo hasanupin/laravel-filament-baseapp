@@ -2,16 +2,18 @@
 
 namespace App\Enums;
 
+use Filament\Support\Contracts\HasLabel;
+
 /**
  * Every admin module that can be granted to a role. Adding a case here adds a row to the role permission grid.
  */
-enum Module: string
+enum Module: string implements HasLabel
 {
     case Users = 'users';
     case Roles = 'roles';
     case Menus = 'menus';
 
-    public function label(): string
+    public function getLabel(): string
     {
         return __("app.modules.{$this->value}");
     }
