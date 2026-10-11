@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Turn a fresh copy of this base into a new app: sets the name, Docker prefix,
+# database name and host ports in .env.example and .env.
+#
+#   bin/new-project <slug> [app-port]
+#   bin/new-project inventory 8091     -> http://localhost:8091, MySQL 3308, Mailpit 1026/8026
+#
+# Other ports follow app-port (offset from 8090), so copies don't clash when run together.
+set -euo pipefail
+
+usage() { sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 1; }
+
+slug="${1:-}"
+port="${2:-8090}"
+
+[[ "$slug" =~ ^[a-z][a-z0-9-]{1,30}$ ]] || { echo "Slug must be lowercase letters, digits or '-' (e.g. inventory)."; usage; }
+[[ "$port" =~ ^[0-9]+$ ]] && (( port >= 1024 && port <= 65000 )) || { echo "Port must be a number between 1024 and 65000."; usage; }
+
+cd "$(dirname "$0")/.."
+
+offset=$(( port - 8090 ))
+name="$(echo "$slug" | tr '-' ' ' | awk '{for (i = 1; i <= NF; i++) $i = toupper(substr($i, 1, 1)) substr($i, 2)} 1')"
+database="$(echo "$slug" | tr '-' '_')"
+
+declare -a settings=(
+  "APP_NAME=\"$name\""
+  "APP_SLUG=$slug"
+  "APP_URL=http://localhost:$port"
+  "APP_PORT=$port"
+  "DB_DATABASE=$database"
+  "FORWARD_DB_PORT=$(( 3307 + offset ))"
+  "FORWARD_MAILPIT_PORT=$(( 1025 + offset ))"
+  "FORWARD_MAILPIT_DASHBOARD_PORT=$(( 8025 + offset ))"
+)
+
+[[ -f .env ]] || cp .env.example .env
+
+for file in .env.example .env; do
+  for setting in "${settings[@]}"; do
+    key="${setting%%=*}"
+    # perl -i works the same on macOS and Linux (sed -i doesn't).
+    if grep -q "^$key=" "$file"; then
+      KEY="$key" LINE="$setting" perl -pi -e 's/^\Q$ENV{KEY}\E=.*$/$ENV{LINE}/' "$file"
+    else
+      echo "$setting" >> "$file"
+    fi
+  done
+done
+
+perl -pi -e "s/^# laravel-filament-baseapp\$/# $slug/" README.md
+
+cat <<EOF
+Configured "$name" ($slug):
+  App      http://localhost:$port
+  MySQL    localhost:$(( 3307 + offset ))  database "$database"
+  Mailpit  http://localhost:$(( 8025 + offset ))
+
+Next:
+  docker compose up -d --build
+  docker compose exec app composer install
+  docker compose exec app php artisan key:generate
+  docker compose exec app php artisan migrate --seed
+EOF

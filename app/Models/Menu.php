@@ -41,7 +41,7 @@ class Menu extends Model
      */
     public function displayLabel(): string
     {
-        return $this->label ?: ($this->module()?->label() ?? $this->key);
+        return $this->label ?: ($this->module()?->getLabel() ?? $this->key);
     }
 
     /**

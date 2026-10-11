@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Filament\Resources\Users\Pages\ManageUsers;
+use App\Filament\Admin\Resources\Users\Pages\ManageUsers;
 use App\Models\User;
 use Database\Seeders\MenuSeeder;
 use Database\Seeders\RoleSeeder;

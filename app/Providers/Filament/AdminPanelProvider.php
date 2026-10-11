@@ -2,8 +2,8 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Pages\Auth\EditProfile;
-use App\Filament\Pages\Auth\Login;
+use App\Filament\Admin\Pages\Auth\EditProfile;
+use App\Filament\Admin\Pages\Auth\Login;
 use App\Http\Middleware\SetLocale;
 use App\Services\LocaleService;
 use Filament\Actions\Action;
@@ -59,12 +59,12 @@ class AdminPanelProvider extends PanelProvider
                 '<p style="text-align:center;margin-top:1.5rem;font-size:.875rem">@foreach ($options as $locale => $name)@if ($locale !== app()->getLocale())<x-filament::link :href="route(\'locale.switch\', $locale)">{{ $name }}</x-filament::link>@endif @endforeach</p>',
                 ['options' => app(LocaleService::class)->options()],
             ))
-            ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
-            ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
+            ->discoverResources(in: app_path('Filament/Admin/Resources'), for: 'App\Filament\Admin\Resources')
+            ->discoverPages(in: app_path('Filament/Admin/Pages'), for: 'App\Filament\Admin\Pages')
             ->pages([
                 Dashboard::class,
             ])
-            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
+            ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\Filament\Admin\Widgets')
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

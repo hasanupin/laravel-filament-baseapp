@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Filament\Pages\Auth\Login;
+use App\Filament\Admin\Pages\Auth\Login;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;

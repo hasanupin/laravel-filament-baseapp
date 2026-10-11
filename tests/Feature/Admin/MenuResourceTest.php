@@ -3,7 +3,7 @@
 namespace Tests\Feature\Admin;
 
 use App\Enums\Module;
-use App\Filament\Resources\Menus\Pages\ManageMenus;
+use App\Filament\Admin\Resources\Menus\Pages\ManageMenus;
 use App\Models\Menu;
 use App\Models\Role;
 use App\Models\User;
@@ -78,6 +78,14 @@ class MenuResourceTest extends TestCase
         Livewire::test(ManageMenus::class)
             ->callAction(TestAction::make(EditAction::class)->table($this->menu), data: ['group' => 'anything'])
             ->assertHasFormErrors(['group' => 'in']);
+    }
+
+    public function test_sidebar_toggle_column_saves_through_service(): void
+    {
+        Livewire::test(ManageMenus::class)
+            ->call('updateTableColumnState', 'is_active', (string) $this->menu->getKey(), false);
+
+        $this->assertFalse($this->menu->fresh()->is_active);
     }
 
     public function test_has_no_create_or_delete(): void

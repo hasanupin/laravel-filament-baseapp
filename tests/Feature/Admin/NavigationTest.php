@@ -2,9 +2,9 @@
 
 namespace Tests\Feature\Admin;
 
-use App\Filament\Resources\Menus\MenuResource;
-use App\Filament\Resources\Roles\RoleResource;
-use App\Filament\Resources\Users\UserResource;
+use App\Filament\Admin\Resources\Menus\MenuResource;
+use App\Filament\Admin\Resources\Roles\RoleResource;
+use App\Filament\Admin\Resources\Users\UserResource;
 use App\Models\Menu;
 use App\Models\Role;
 use App\Models\User;

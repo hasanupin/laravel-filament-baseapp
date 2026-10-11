@@ -1,13 +1,26 @@
 # laravel-filament-baseapp
 Laravel Filament Base Admin — Laravel 13 + Filament 5, running on Docker (PHP 8.4 Apache + MySQL 8.4).
 
+## Start a new app from this base
+This repo is meant to be copied. On GitHub, enable **Settings → Template repository** once. Then, for each new app:
+
+1. Click **Use this template**, create the new repo, and clone it.
+2. Name it and pick a free port. Other ports follow the app port, so copies can run side by side:
+   ```bash
+   bin/new-project inventory 8091   # http://localhost:8091, MySQL 3308, Mailpit 8026
+   ```
+   This sets `APP_NAME`, `APP_SLUG` (the Docker name prefix), `DB_DATABASE` and the host ports in `.env.example` and `.env`. Running it again is safe.
+3. Continue with **Setup** below. To add your own modules, see "Adding a module" in `CLAUDE.md`.
+
 ## Containers
+Names are `<APP_SLUG>-…`. The defaults below are for `APP_SLUG=baseapp`.
+
 | Container | Purpose | Host port |
 |-----------|---------|-----------|
 | `baseapp-app` | PHP 8.4 + Apache | `8090` (`APP_PORT`) |
 | `baseapp-queue` | `php artisan queue:work` (database driver) | – |
 | `baseapp-mysql` | MySQL 8.4 | `3307` (`FORWARD_DB_PORT`) |
-| `baseapp-mailpit` | Catches outgoing mail (password reset) | SMTP `1025`, inbox UI `8025` |
+| `baseapp-mailpit` | Catches outgoing mail (password reset) | SMTP `1025` (`FORWARD_MAILPIT_PORT`), inbox UI `8025` (`FORWARD_MAILPIT_DASHBOARD_PORT`) |
 
 No Redis: cache, session and queue all use the `database` driver.
 
@@ -15,14 +28,11 @@ No Redis: cache, session and queue all use the `database` driver.
 ```bash
 cp .env.example .env
 docker compose up -d --build
-docker exec -it baseapp-app bash
+docker compose exec app composer install
+docker compose exec app php artisan key:generate
+docker compose exec app php artisan migrate --seed
 ```
-Inside the container:
-```bash
-composer install
-php artisan key:generate
-php artisan migrate --seed
-```
+Use `docker compose exec app bash` for a shell. `docker compose` commands work whatever the `APP_SLUG` is.
 Open http://localhost:8090/ (it redirects to `/login` until you sign in) and log in with a sample account (password `password`):
 
 | Email | Role | Menu access |
@@ -53,9 +63,9 @@ Each role ticks View / Create / Update / Delete per module (stored as JSON on `r
 
 Code layout: Filament resources/pages are thin bridges, validation rules live in `app/Http/Requests`, logic lives in `app/Services`.
 
-The queue worker restarts until the migrations have run (it needs the `cache`/`jobs` tables). After you change code, run `docker restart baseapp-queue` so the worker picks it up. If routes look stale (e.g. `/login` 404s), run `php artisan optimize:clear`.
+The queue worker restarts until the migrations have run (it needs the `cache`/`jobs` tables). After you change code, run `docker compose restart queue` so the worker picks it up. If routes look stale (e.g. `/login` 404s), run `docker compose exec app php artisan optimize:clear`.
 
 ## Tests
 ```bash
-docker exec baseapp-app php artisan test
+docker compose exec app php artisan test
 ```
